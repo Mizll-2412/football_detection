@@ -7,6 +7,7 @@ from torchvision.transforms import Compose, ToTensor, Resize, ToPILImage
 
 class FootballDataset(Dataset):
     def __init__(self, root, train = True, transform = None):
+        self.train = train
         if train:
             self.root = os.path.join(root, "football_train")
         else:

@@ -9,13 +9,14 @@ from torchvision.models import resnet50, ResNet50_Weights
 from my_resnet_model import  MyResNet
 import torch.nn as nn
 from torch.utils.tensorboard import SummaryWriter
+from sklearn.metrics import accuracy_score
 
 from argparse import ArgumentParser
 from tqdm import tqdm
 
 def get_args():
     parser = ArgumentParser(description="CNN training")
-    parser.add_argument("--root", "-r", type=str, default="D:\\python\\pythonProject\\football\\data\\football_train", help="Root of the dataset")
+    parser.add_argument("--root", "-r", type=str, default="D:\\python\\pythonProject\\football\\data", help="Root of the dataset")
     parser.add_argument("--epochs", "-e", type=int, default=10, help="Number of epochs")
     parser.add_argument("--image-size", "-i", type=int, default=224, help="Image size")
     parser.add_argument("--batch-size", "-b", type=int, default=2, help="Batch size")
@@ -50,7 +51,7 @@ if __name__ == '__main__':
         ToTensor(),
     ])
 
-    dataset = FootballDataset(args.root, transform)
+    dataset = FootballDataset(args.root,train=True, transform=transform)
     training_loader = DataLoader(
         dataset=dataset,
         batch_size=args.batch_size,
@@ -59,7 +60,18 @@ if __name__ == '__main__':
         shuffle=True,
         collate_fn=my_collate_fc
     )
-    model = MyResNet()
+    test_dataset = FootballDataset(args.root, train=False, transform=transform)
+    testing_loader = DataLoader(
+        dataset = test_dataset,
+        batch_size = args.batch_size,
+        num_workers=4,
+        drop_last=False,
+        shuffle=True,
+        collate_fn=my_collate_fc
+
+    )
+    writer = SummaryWriter(args.logging)
+    model = MyResNet(num_classes=20).to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=1e-3, momentum=0.9)
     if args.checkpoint:
@@ -76,15 +88,45 @@ if __name__ == '__main__':
         progress_bar = tqdm(training_loader, colour="green")
         for iter, (image, label) in enumerate(progress_bar):
             image = image.to(device)
-            label = label.to(device)
+            label = torch.tensor(label, dtype=torch.long).to(device)
 
             outputs = model(image)
-            loss_value = criterion(outputs)
+            loss_value = criterion(outputs,label)
             progress_bar.set_description("Epoch {}/{}. Iteration {}/{}: Loss {:.3f}".format(epoch+1, args.epochs, iter+1, len(training_loader), loss_value))
             writer.add_scalar("Train/Loss", loss_value, epoch * len(training_loader) + iter)
 
             optimizer.zero_grad()
             loss_value.backward()
             optimizer.step()
-
-
+        model.eval()
+        all_prediction = []
+        all_labels = []
+        for iter, (image, label) in enumerate(testing_loader):
+            image = image.to(device)
+            label = label.to(device)
+            all_labels.extend(label)
+            with torch.no_grad():
+                prediction = model(image)
+                indices, values = torch.argmax(prediction, dim = 1)
+                all_prediction.extend(indices)
+                loss = criterion(prediction, label)
+        all_labels = [label.item() for label in all_labels]
+        all_prediction = [prediction.item() for prediction in all_prediction]
+        accuracy = accuracy_score(all_labels, all_prediction)
+        print("Epoch {}".format(epoch+1))
+        writer.add_scalar("Validation/Accuracy", accuracy, epoch)
+        checkpoint = {
+            "epoch": epoch+1,
+            "model": model.state_dict(),
+            "optimizer": optimizer.state_dict()
+        }
+        torch.save(checkpoint, "{}/last_football_prediction_model.pth".format(args.trained_model))
+        if accuracy > best_acc:
+            best_acc = accuracy
+            checkpoint = {
+                "epoch": epoch + 1,
+                "best_acc": best_acc,
+                "model": model.state_dict(),
+                "optimizer": optimizer.state_dict()
+            }
+            torch.save(checkpoint, "{}/best_cnn.pt".format(args.trained_models))
