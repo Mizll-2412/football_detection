@@ -44,10 +44,9 @@ class FootballDataset(Dataset):
         cap.set(cv2.CAP_PROP_POS_FRAMES, idx)
         flag, frame = cap.read()
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        annotations = [anno for anno in annotations if anno["image_id"]== idx +1 and anno["category_id"]==4]
+        annotations = [anno for anno in annotations if anno["image_id"] == idx + 1 and anno["category_id"] == 4]
         box = [annotation["bbox"] for annotation in annotations]
-        cropped_images = [frame[int(y):int(y+h), int(x):int(x+w)] for [x, y , w , h] in box]
-
+        cropped_images = [frame[int(y):int(y + h), int(x):int(x + w)] for [x, y, w, h] in box]
         jerseys = [int(annotation["attributes"]["jersey_number"]) for annotation in annotations]
         if self.transform:
             cropped_images = [self.transform(image) for image in cropped_images]

@@ -33,7 +33,7 @@ def my_collate_fc(batch):
     final_labels = []
     for label in labels:
         final_labels.extend(label)
-    return images, final_labels
+    return images, torch.LongTensor(final_labels)
 if __name__ == '__main__':
     args = get_args()
     if torch.cuda.is_available():
@@ -55,7 +55,7 @@ if __name__ == '__main__':
     training_loader = DataLoader(
         dataset=dataset,
         batch_size=args.batch_size,
-        num_workers=4,
+        num_workers=2,
         drop_last=False,
         shuffle=True,
         collate_fn=my_collate_fc
@@ -64,7 +64,7 @@ if __name__ == '__main__':
     testing_loader = DataLoader(
         dataset = test_dataset,
         batch_size = args.batch_size,
-        num_workers=4,
+        num_workers=2,
         drop_last=False,
         shuffle=True,
         collate_fn=my_collate_fc
@@ -88,7 +88,7 @@ if __name__ == '__main__':
         progress_bar = tqdm(training_loader, colour="green")
         for iter, (image, label) in enumerate(progress_bar):
             image = image.to(device)
-            label = torch.tensor(label, dtype=torch.long).to(device)
+            label = label.to(device)
 
             outputs = model(image)
             loss_value = criterion(outputs,label)
