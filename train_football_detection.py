@@ -28,12 +28,16 @@ def get_args():
 
 
 def my_collate_fc(batch):
+    batch = [b for b in batch if b is not None]
+    if len(batch) == 0:
+        return None
     images, labels = list(zip(*batch))
     images = torch.cat(images)
     final_labels = []
     for label in labels:
         final_labels.extend(label)
-    return images, torch.LongTensor(final_labels)
+    final_labels = torch.tensor(final_labels, dtype=torch.long)
+    return images, final_labels
 if __name__ == '__main__':
     args = get_args()
     if torch.cuda.is_available():
@@ -52,8 +56,10 @@ if __name__ == '__main__':
     ])
 
     dataset = FootballDataset(args.root,train=True, transform=transform)
+    valid_indices = [i for i in range(len(dataset)) if i not in [0, 1515, 3015, 4541]]
+    subset = torch.utils.data.Subset(dataset, valid_indices)
     training_loader = DataLoader(
-        dataset=dataset,
+        dataset=subset,
         batch_size=args.batch_size,
         num_workers=2,
         drop_last=False,
@@ -61,8 +67,10 @@ if __name__ == '__main__':
         collate_fn=my_collate_fc
     )
     test_dataset = FootballDataset(args.root, train=False, transform=transform)
+    valid_indicess = [i for i in range(len(test_dataset)) if i not in [0, 1500]]
+    subset_test = torch.utils.data.Subset(test_dataset, valid_indicess)
     testing_loader = DataLoader(
-        dataset = test_dataset,
+        dataset = subset_test,
         batch_size = args.batch_size,
         num_workers=2,
         drop_last=False,

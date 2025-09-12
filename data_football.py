@@ -31,6 +31,7 @@ class FootballDataset(Dataset):
     def __len__(self):
         return self.to_id
     def __getitem__(self, idx):
+        empty_indices = []
         for key, value in self.video_select.items():
             if value[0]<=idx +1 <= value[1]:
                 idx = idx - value[0]
@@ -53,6 +54,37 @@ class FootballDataset(Dataset):
             cropped_images = torch.stack(cropped_images)
         return  cropped_images, jerseys
 
+
+def check_empty_idx(dataset):
+    empty_indices = []
+
+    for idx in range(len(dataset)):
+        try:
+            # Copy logic từ __getitem__ để check annotations
+            for key, value in dataset.video_select.items():
+                if value[0] <= idx + 1 <= value[1]:
+                    adjusted_idx = idx - value[0]
+                    select_path = key
+                    break
+
+            json_dir, video_dir = os.listdir(select_path)
+            json_dir = os.path.join(select_path, json_dir)
+
+            with open(json_dir, "r") as json_file:
+                annotations = json.load(json_file)["annotations"]
+
+            filtered_annotations = [anno for anno in annotations
+                                    if anno["image_id"] == adjusted_idx + 1 and anno["category_id"] == 4]
+
+            if len(filtered_annotations) == 0:
+                empty_indices.append(idx)
+
+        except:
+            empty_indices.append(idx)
+
+    print(f"Empty indices: {empty_indices}")
+    print(f"Total empty: {len(empty_indices)} out of {len(dataset)}")
+    return empty_indices
 if __name__ == '__main__':
     transform = Compose([
         ToPILImage(),
@@ -60,5 +92,8 @@ if __name__ == '__main__':
         ToTensor(),
     ])
     dataset = FootballDataset("D:\\python\\pythonProject\\football\\data", train= False, transform=transform)
-    cropped_images, jerseys = dataset.__getitem__(200)
-    print(cropped_images.shape)
+    # cropped_images, jerseys = dataset.__getitem__(200)
+    # print(cropped_images.shape)
+    empty_idx = check_empty_idx(dataset)
+    print("nothing")
+
