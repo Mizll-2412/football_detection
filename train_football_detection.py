@@ -56,8 +56,8 @@ if __name__ == '__main__':
     ])
 
     dataset = FootballDataset(args.root,train=True, transform=transform)
-    # valid_indices = [i for i in range(len(dataset)) if i not in [0, 1515, 3015, 4541]]
-    valid_indices = [i for i in range(len(dataset)) if i  in [1, 100]]
+    valid_indices = [i for i in range(len(dataset)) if i not in [0, 1515, 3015, 4541]]
+    # valid_indices = [i for i in range(len(dataset)) if i  in [1, 100]]
     subset = torch.utils.data.Subset(dataset, valid_indices)
     training_loader = DataLoader(
         dataset=subset,
@@ -68,8 +68,8 @@ if __name__ == '__main__':
         collate_fn=my_collate_fc
     )
     test_dataset = FootballDataset(args.root, train=False, transform=transform)
-    # valid_indicess = [i for i in range(len(test_dataset)) if i not in [0, 1500]]
-    valid_indicess = [i for i in range(len(test_dataset)) if i in [1, 100]]
+    valid_indicess = [i for i in range(len(test_dataset)) if i not in [0, 1500]]
+    # valid_indicess = [i for i in range(len(test_dataset)) if i in [1, 100]]
     subset_test = torch.utils.data.Subset(test_dataset, valid_indicess)
     testing_loader = DataLoader(
         dataset = subset_test,
@@ -89,7 +89,7 @@ if __name__ == '__main__':
         start_epoch = checkpoint["epoch"]
         best_acc = checkpoint["best_acc"]
         model.load_state_dict(checkpoint["model"])
-        optimizer = model.load_state_dict(checkpoint["optimizer"])
+        optimizer.load_state_dict(checkpoint["optimizer"])
     else:
         start_epoch =0
         best_acc = 0
