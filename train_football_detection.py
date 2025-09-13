@@ -16,12 +16,12 @@ from tqdm import tqdm
 
 def get_args():
     parser = ArgumentParser(description="CNN training")
-    parser.add_argument("--root", "-r", type=str, default="D:\\python\\pythonProject\\football\\data", help="Root of the dataset")
+    parser.add_argument("--root", "-r", type=str, default="D:\\football_detection\\football\\data", help="Root of the dataset")
     parser.add_argument("--epochs", "-e", type=int, default=10, help="Number of epochs")
     parser.add_argument("--image-size", "-i", type=int, default=224, help="Image size")
     parser.add_argument("--batch-size", "-b", type=int, default=2, help="Batch size")
-    parser.add_argument("--logging", "-l", type=str, default="D:\\python\\pythonProject\\football\\tensorboard")
-    parser.add_argument("--trained_models", "-t", type=str, default="D:\\python\\pythonProject\\football\\model")
+    parser.add_argument("--logging", "-l", type=str, default="D:\\football_detection\\football\\tensorboard")
+    parser.add_argument("--trained_models", "-t", type=str, default="D:\\football_detection\\football\\model")
     parser.add_argument("--checkpoint", "-c", type=str, default=None)
     args = parser.parse_args()
     return args
@@ -56,7 +56,8 @@ if __name__ == '__main__':
     ])
 
     dataset = FootballDataset(args.root,train=True, transform=transform)
-    valid_indices = [i for i in range(len(dataset)) if i not in [0, 1515, 3015, 4541]]
+    # valid_indices = [i for i in range(len(dataset)) if i not in [0, 1515, 3015, 4541]]
+    valid_indices = [i for i in range(len(dataset)) if i  in [1, 100]]
     subset = torch.utils.data.Subset(dataset, valid_indices)
     training_loader = DataLoader(
         dataset=subset,
@@ -67,7 +68,8 @@ if __name__ == '__main__':
         collate_fn=my_collate_fc
     )
     test_dataset = FootballDataset(args.root, train=False, transform=transform)
-    valid_indicess = [i for i in range(len(test_dataset)) if i not in [0, 1500]]
+    # valid_indicess = [i for i in range(len(test_dataset)) if i not in [0, 1500]]
+    valid_indicess = [i for i in range(len(test_dataset)) if i in [1, 100]]
     subset_test = torch.utils.data.Subset(test_dataset, valid_indicess)
     testing_loader = DataLoader(
         dataset = subset_test,
@@ -115,20 +117,21 @@ if __name__ == '__main__':
             all_labels.extend(label)
             with torch.no_grad():
                 prediction = model(image)
-                indices, values = torch.argmax(prediction, dim = 1)
+                indices = torch.argmax(prediction, dim = 1)
                 all_prediction.extend(indices)
                 loss = criterion(prediction, label)
         all_labels = [label.item() for label in all_labels]
         all_prediction = [prediction.item() for prediction in all_prediction]
         accuracy = accuracy_score(all_labels, all_prediction)
-        print("Epoch {}".format(epoch+1))
+        print("Epoch {}: {}".format(epoch+1, accuracy_score(all_labels, all_prediction)))
         writer.add_scalar("Validation/Accuracy", accuracy, epoch)
+        os.makedirs(args.trained_models, exist_ok=True)
         checkpoint = {
             "epoch": epoch+1,
             "model": model.state_dict(),
             "optimizer": optimizer.state_dict()
         }
-        torch.save(checkpoint, "{}/last_football_prediction_model.pth".format(args.trained_model))
+        torch.save(checkpoint, "{}/last_football_prediction_model.pth".format(args.trained_models))
         if accuracy > best_acc:
             best_acc = accuracy
             checkpoint = {
